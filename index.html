@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="MP4動画から静止画フレームを抽出し、端末内だけでストーリーボード画像を作成します。"
+    />
+    <title>Video Storyboard Builder</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div>
+        <p class="eyebrow">LOCAL VIDEO TOOL</p>
+        <h1>Video Storyboard Builder</h1>
+        <p class="subtitle">
+          MP4動画からフレームを選び、グリッド画像として書き出します。動画は端末外へ送信されません。
+        </p>
+      </div>
+      <div class="privacy-badge" aria-label="端末内処理">
+        <span class="privacy-dot" aria-hidden="true"></span>
+        端末内処理
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <section class="workspace-card source-panel" aria-labelledby="source-title">
+        <div class="section-heading">
+          <div>
+            <p class="step-label">STEP 1</p>
+            <h2 id="source-title">動画を読み込む</h2>
+          </div>
+          <button id="resetButton" class="button button-ghost" type="button" hidden>
+            最初からやり直す
+          </button>
+        </div>
+
+        <label id="dropZone" class="drop-zone" for="videoInput">
+          <input id="videoInput" type="file" accept="video/mp4,.mp4" />
+          <span class="drop-icon" aria-hidden="true">＋</span>
+          <strong>MP4動画を選択</strong>
+          <span>または、ここへドラッグ＆ドロップ</span>
+          <small>対応形式：MP4 / H.264</small>
+        </label>
+
+        <div id="fileInfo" class="file-info" hidden></div>
+        <div id="errorMessage" class="message message-error" role="alert" hidden></div>
+
+        <div id="playerArea" class="player-area" hidden>
+          <div class="video-frame">
+            <video id="video" playsinline preload="metadata"></video>
+            <div id="loadingOverlay" class="loading-overlay" hidden>
+              <span class="spinner" aria-hidden="true"></span>
+              読み込み中
+            </div>
+          </div>
+
+          <div class="transport-controls">
+            <button id="playButton" class="icon-button" type="button" aria-label="再生">
+              <span id="playIcon" aria-hidden="true">▶</span>
+            </button>
+            <div class="timeline-stack">
+              <div class="timeline-wrap">
+                <input
+                  id="timeline"
+                  class="timeline"
+                  type="range"
+                  min="0"
+                  max="0"
+                  step="0.001"
+                  value="0"
+                  aria-label="動画タイムライン"
+                />
+                <div id="captureMarkers" class="capture-markers" aria-hidden="true"></div>
+              </div>
+              <div class="time-row">
+                <span id="currentTime">00:00.000</span>
+                <span id="duration">00:00.000</span>
+              </div>
+            </div>
+          </div>
+
+          <button id="captureButton" class="button button-primary capture-button" type="button">
+            <span aria-hidden="true">◎</span>
+            現在のフレームをキャプチャー
+          </button>
+        </div>
+      </section>
+
+      <section class="workspace-card frames-panel" aria-labelledby="frames-title">
+        <div class="section-heading">
+          <div>
+            <p class="step-label">STEP 2</p>
+            <h2 id="frames-title">キャプチャーフレーム</h2>
+          </div>
+          <div class="frame-count"><strong id="frameCount">0</strong> 枚</div>
+        </div>
+
+        <div id="emptyFrames" class="empty-state">
+          <span class="empty-icon" aria-hidden="true">▦</span>
+          <p>動画を読み込み、必要な場面でキャプチャーしてください。</p>
+        </div>
+
+        <div id="frameGrid" class="frame-grid" aria-live="polite"></div>
+        <button id="clearFramesButton" class="button button-danger-text" type="button" hidden>
+          すべて削除
+        </button>
+      </section>
+
+      <section class="workspace-card settings-panel" aria-labelledby="settings-title">
+        <div class="section-heading">
+          <div>
+            <p class="step-label">STEP 3</p>
+            <h2 id="settings-title">グリッド設定</h2>
+          </div>
+        </div>
+
+        <div class="settings-grid">
+          <label class="field">
+            <span>列数</span>
+            <input id="columnsInput" type="number" min="1" max="12" step="1" value="3" />
+          </label>
+
+          <label class="field">
+            <span>出力横幅</span>
+            <select id="exportWidthSelect">
+              <option value="1280">1280 px</option>
+              <option value="1920" selected>1920 px</option>
+              <option value="2560">2560 px</option>
+              <option value="3840">3840 px</option>
+            </select>
+          </label>
+
+          <label class="toggle-field">
+            <span>
+              <strong>パネル番号</strong>
+              <small>左上に連番を表示</small>
+            </span>
+            <input id="numberingToggle" type="checkbox" checked />
+          </label>
+        </div>
+      </section>
+
+      <section class="workspace-card preview-panel" aria-labelledby="preview-title">
+        <div class="section-heading">
+          <div>
+            <p class="step-label">STEP 4</p>
+            <h2 id="preview-title">出力プレビュー</h2>
+          </div>
+          <span id="gridSummary" class="grid-summary">—</span>
+        </div>
+
+        <div id="previewEmpty" class="empty-state preview-empty">
+          <span class="empty-icon" aria-hidden="true">▦</span>
+          <p>キャプチャーしたフレームがここに並びます。</p>
+        </div>
+        <div id="previewViewport" class="preview-viewport" hidden>
+          <canvas id="previewCanvas"></canvas>
+        </div>
+
+        <button id="exportButton" class="button button-primary export-button" type="button" disabled>
+          PNG画像を書き出す
+        </button>
+        <p id="statusMessage" class="status-message" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>ブラウザ上で完結するため、動画・静止画データはサーバーへアップロードされません。</p>
+    </footer>
+
+    <template id="frameTemplate">
+      <article class="frame-card">
+        <button class="frame-seek" type="button" title="この位置へ移動">
+          <img alt="" />
+          <span class="frame-number"></span>
+        </button>
+        <div class="frame-meta">
+          <time></time>
+          <button class="delete-frame" type="button" aria-label="フレームを削除">削除</button>
+        </div>
+      </article>
+    </template>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
