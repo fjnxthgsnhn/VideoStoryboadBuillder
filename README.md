@@ -30,8 +30,8 @@ python -m http.server 8080
 Cloudflare Pagesでは以下の設定で公開できます。
 
 - Framework preset: `None`
-- Build command: 空欄
-- Build output directory: `/`
+- Build command: `exit 0`
+- Build output directory: `.`
 
 GitHubリポジトリを接続すると、`main` ブランチへの更新がそのままデプロイされます。
 
